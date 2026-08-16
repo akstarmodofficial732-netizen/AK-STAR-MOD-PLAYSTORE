@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { AppItem, CategoryInfo, Coupon, KeyTier, PaymentSetting, Purchase, ScreenType } from '../types';
-import { INITIAL_PAYMENT_SETTING, CATEGORY_ICON_MAP } from '../data/mockData';
+import { AppItem, CategoryInfo, Coupon, KeyTier, PaymentSetting, Purchase, ScreenType, SupportSettings } from '../types';
+import { INITIAL_PAYMENT_SETTING, INITIAL_SUPPORT_SETTING, CATEGORY_ICON_MAP } from '../data/mockData';
 import { 
   subscribeToPublishedApps, 
   subscribeToAllAdminApps,
   subscribeToPaymentSettings, 
+  subscribeToSupportSettings,
   subscribeToPurchases, 
   createPurchaseRecord, 
   validateCoupon, 
@@ -13,6 +14,7 @@ import {
   deleteAppFromFirestore,
   toggleAppPublishedStatus,
   updateAdminPaymentSettings,
+  updateAdminSupportSettings,
   approvePurchaseOrder,
   rejectPurchaseOrder,
 } from '../services/firebase';
@@ -56,6 +58,8 @@ interface AppContextType {
   // Realtime Data
   purchases: Purchase[];
   paymentSettings: PaymentSetting;
+  supportSettings: SupportSettings;
+  isLoadingSupportSettings: boolean;
   
   // Search & Filters
   searchQuery: string;
@@ -82,6 +86,7 @@ interface AppContextType {
   deleteApp: (appId: string, apkStoragePath?: string, iconStoragePath?: string) => Promise<void>;
   togglePublishApp: (appId: string, published: boolean) => Promise<void>;
   savePaymentSettings: (settings: PaymentSetting) => Promise<void>;
+  saveSupportSettings: (settings: SupportSettings) => Promise<void>;
   approveOrder: (purchaseId: string, customKey?: string) => Promise<void>;
   rejectOrder: (purchaseId: string, reason: string) => Promise<void>;
   simulateAdminAction: (purchaseId: string, approve: boolean, reason?: string) => void;
@@ -127,6 +132,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Realtime Data
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [paymentSettings, setPaymentSettings] = useState<PaymentSetting>(INITIAL_PAYMENT_SETTING);
+  const [supportSettings, setSupportSettings] = useState<SupportSettings>(INITIAL_SUPPORT_SETTING);
+  const [isLoadingSupportSettings, setIsLoadingSupportSettings] = useState<boolean>(true);
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -192,6 +199,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const unsubscribe = subscribeToPaymentSettings((settings) => {
       setPaymentSettings(settings);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 3b. Realtime support settings listener (settings/support)
+  useEffect(() => {
+    setIsLoadingSupportSettings(true);
+    const unsubscribe = subscribeToSupportSettings((settings) => {
+      setSupportSettings(settings);
+      setIsLoadingSupportSettings(false);
     });
     return () => unsubscribe();
   }, []);
@@ -380,6 +397,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return await updateAdminPaymentSettings(settings);
   };
 
+  const saveSupportSettings = async (settings: SupportSettings): Promise<void> => {
+    return await updateAdminSupportSettings(settings);
+  };
+
   const approveOrder = async (purchaseId: string, customKey?: string): Promise<void> => {
     return await approvePurchaseOrder(purchaseId, customKey);
   };
@@ -421,6 +442,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         removeCouponCode,
         purchases,
         paymentSettings,
+        supportSettings,
+        isLoadingSupportSettings,
         searchQuery,
         setSearchQuery,
         searchCategoryFilter,
@@ -441,6 +464,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         deleteApp,
         togglePublishApp,
         savePaymentSettings,
+        saveSupportSettings,
         approveOrder,
         rejectOrder,
         simulateAdminAction,

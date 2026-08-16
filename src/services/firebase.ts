@@ -29,8 +29,8 @@ import {
   getDownloadURL, 
   deleteObject 
 } from 'firebase/storage';
-import { AppItem, Coupon, PaymentSetting, Purchase, UserProfile } from '../types';
-import { INITIAL_PAYMENT_SETTING } from '../data/mockData';
+import { AppItem, Coupon, PaymentSetting, Purchase, SupportSettings, UserProfile } from '../types';
+import { INITIAL_PAYMENT_SETTING, INITIAL_SUPPORT_SETTING } from '../data/mockData';
 
 // Operation type for error tracking
 export enum OperationType {
@@ -111,6 +111,7 @@ export const googleProvider = new GoogleAuthProvider();
 const STORAGE_KEYS = {
   USER: 'ak_star_user',
   PAYMENT_SETTINGS: 'ak_star_payment_settings',
+  SUPPORT_SETTINGS: 'ak_star_support_settings',
   PURCHASES: 'ak_star_purchases',
   LOCAL_APPS: 'ak_star_apps_db',
 };
@@ -741,6 +742,72 @@ export async function updateAdminPaymentSettings(settings: PaymentSetting): Prom
   localStorage.setItem(STORAGE_KEYS.PAYMENT_SETTINGS, JSON.stringify(settings));
   window.dispatchEvent(new Event('ak_payment_settings_changed'));
 }
+
+// =================== SUPPORT & SOCIAL SETTINGS SERVICES (settings/support) ===================
+
+export function subscribeToSupportSettings(callback: (settings: SupportSettings) => void): () => void {
+  if (isFirebaseConfigured && db) {
+    try {
+      // Primary Document: settings/support (fallback to settings/links if needed)
+      const docRef = doc(db, 'settings', 'support');
+      const unsubscribe = onSnapshot(
+        docRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            callback({
+              whatsapp_url: data.whatsapp_url || data.whatsappUrl || INITIAL_SUPPORT_SETTING.whatsapp_url,
+              telegram_url: data.telegram_url || data.telegramUrl || INITIAL_SUPPORT_SETTING.telegram_url,
+              whatsapp_number: data.whatsapp_number || data.whatsappNumber || INITIAL_SUPPORT_SETTING.whatsapp_number,
+              telegram_username: data.telegram_username || data.telegramUsername || INITIAL_SUPPORT_SETTING.telegram_username,
+              updatedAt: data.updatedAt,
+            });
+          } else {
+            callback(INITIAL_SUPPORT_SETTING);
+          }
+        },
+        (error) => {
+          console.warn('Firestore support settings listener warning:', error);
+        }
+      );
+      return unsubscribe;
+    } catch (err) {
+      console.warn('Support settings subscription error:', err);
+    }
+  }
+
+  const getStored = (): SupportSettings => {
+    const raw = localStorage.getItem(STORAGE_KEYS.SUPPORT_SETTINGS);
+    return raw ? JSON.parse(raw) : INITIAL_SUPPORT_SETTING;
+  };
+  callback(getStored());
+
+  const handler = () => callback(getStored());
+  window.addEventListener('ak_support_settings_changed', handler);
+  return () => window.removeEventListener('ak_support_settings_changed', handler);
+}
+
+export async function updateAdminSupportSettings(settings: SupportSettings): Promise<void> {
+  const payload = {
+    whatsapp_url: settings.whatsapp_url.trim(),
+    telegram_url: settings.telegram_url.trim(),
+    whatsapp_number: settings.whatsapp_number?.trim() || '',
+    telegram_username: settings.telegram_username?.trim() || '',
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isFirebaseConfigured && db) {
+    try {
+      await setDoc(doc(db, 'settings', 'support'), payload, { merge: true });
+    } catch (err) {
+      console.warn('Error saving support settings in Firestore:', err);
+    }
+  }
+
+  localStorage.setItem(STORAGE_KEYS.SUPPORT_SETTINGS, JSON.stringify(payload));
+  window.dispatchEvent(new Event('ak_support_settings_changed'));
+}
+
 
 export function subscribeToPurchases(userId: string, callback: (purchases: Purchase[]) => void): () => void {
   if (isFirebaseConfigured && db && userId) {

@@ -26,12 +26,14 @@ import {
   PackageCheck,
   FileCheck,
   Percent,
-  Download
+  Download,
+  MessageCircle,
+  Send
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { TopHeader } from '../navigation/TopHeader';
-import { AppItem, KeyTier, PaymentSetting } from '../../types';
+import { AppItem, KeyTier, PaymentSetting, SupportSettings } from '../../types';
 import { 
   uploadApkToFirebaseStorage, 
   uploadImageToFirebaseStorage,
@@ -47,6 +49,8 @@ export const AdminScreen: React.FC = () => {
     togglePublishApp, 
     paymentSettings, 
     savePaymentSettings,
+    supportSettings,
+    saveSupportSettings,
     purchases,
     approveOrder,
     rejectOrder,
@@ -56,7 +60,7 @@ export const AdminScreen: React.FC = () => {
   } = useApp();
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'upload' | 'catalog' | 'payment' | 'orders'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'catalog' | 'payment' | 'orders' | 'support'>('upload');
   
   // App Form state
   const [editingAppId, setEditingAppId] = useState<string | null>(null);
@@ -100,6 +104,13 @@ export const AdminScreen: React.FC = () => {
   const [beneficiaryName, setBeneficiaryName] = useState(paymentSettings.beneficiaryName || '');
   const [qrCodeUrl, setQrCodeUrl] = useState(paymentSettings.qrCodeUrl || '');
   const [paymentSavedMsg, setPaymentSavedMsg] = useState(false);
+
+  // Support & Social Links Form state (settings/support)
+  const [whatsappUrl, setWhatsappUrl] = useState(supportSettings.whatsapp_url || '');
+  const [telegramUrl, setTelegramUrl] = useState(supportSettings.telegram_url || '');
+  const [whatsappNumber, setWhatsappNumber] = useState(supportSettings.whatsapp_number || '');
+  const [telegramUsername, setTelegramUsername] = useState(supportSettings.telegram_username || '');
+  const [supportSavedMsg, setSupportSavedMsg] = useState(false);
 
   // Handle direct APK file selection
   const handleApkFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -367,6 +378,20 @@ export const AdminScreen: React.FC = () => {
     setTimeout(() => setPaymentSavedMsg(false), 3000);
   };
 
+  const handleSaveSupportSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const updated: SupportSettings = {
+      whatsapp_url: whatsappUrl.trim(),
+      telegram_url: telegramUrl.trim(),
+      whatsapp_number: whatsappNumber.trim(),
+      telegram_username: telegramUsername.trim(),
+    };
+
+    await saveSupportSettings(updated);
+    setSupportSavedMsg(true);
+    setTimeout(() => setSupportSavedMsg(false), 3000);
+  };
+
   const isUserAdmin = Boolean(user && !user.isGuest && (user.isAdmin || checkIsAdmin(user.email)));
 
   if (!isUserAdmin) {
@@ -408,7 +433,7 @@ export const AdminScreen: React.FC = () => {
 
       <main className="max-w-md mx-auto sm:max-w-2xl md:max-w-4xl lg:max-w-5xl px-4 pt-3 space-y-5">
         {/* Admin Navigation Tabs */}
-        <div className="grid grid-cols-4 gap-1.5 p-1.5 rounded-2xl bg-[#14151D] border border-[#232533]">
+        <div className="grid grid-cols-5 gap-1.5 p-1.5 rounded-2xl bg-[#14151D] border border-[#232533]">
           <button
             onClick={() => setActiveTab('upload')}
             className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all ${
@@ -447,7 +472,17 @@ export const AdminScreen: React.FC = () => {
                 : 'text-[#8C91A0] hover:text-white'
             }`}
           >
-            UPI Settings
+            UPI
+          </button>
+          <button
+            onClick={() => setActiveTab('support')}
+            className={`py-2 px-1 text-center rounded-xl text-xs font-bold transition-all ${
+              activeTab === 'support'
+                ? 'bg-[#F5B014] text-black shadow-md'
+                : 'text-[#8C91A0] hover:text-white'
+            }`}
+          >
+            Support
           </button>
         </div>
 
@@ -1095,6 +1130,122 @@ export const AdminScreen: React.FC = () => {
                 >
                   <Save className="w-4 h-4 text-black" />
                   <span>SAVE PAYMENT SETTINGS</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+
+        {/* ================= TAB 5: 24/7 SUPPORT & SOCIAL LINKS CONFIGURATION (settings/support) ================= */}
+        {activeTab === 'support' && (
+          <form onSubmit={handleSaveSupportSettings} className="space-y-4">
+            <div className="p-5 rounded-3xl bg-[#14151D] border border-[#232533] space-y-4 shadow-xl">
+              <div className="flex items-center space-x-2 border-b border-[#232533] pb-3">
+                <span className="w-1.5 h-4 bg-[#25D366] rounded-full" />
+                <h3 className="text-sm font-extrabold text-white uppercase tracking-wider">
+                  24/7 Support Channels Configuration (settings/support)
+                </h3>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-[#181A26] border border-[#272A3B] space-y-1">
+                <p className="text-xs text-[#E2E4EE] font-semibold">
+                  Dynamic Firestore Sync:
+                </p>
+                <p className="text-[11px] text-[#8C91A0] leading-relaxed">
+                  These URLs are served live to the customer <strong className="text-white">"Contact 24/7 Support"</strong> modal. Users will be directed straight to your WhatsApp and Telegram channels upon clicking.
+                </p>
+              </div>
+
+              {supportSavedMsg && (
+                <div className="p-3 rounded-xl bg-[#10B981]/20 border border-[#10B981]/40 text-[#34D399] text-xs font-semibold flex items-center space-x-2">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Support channels saved to Firestore (settings/support)!</span>
+                </div>
+              )}
+
+              {/* WhatsApp Config */}
+              <div className="p-4 rounded-2xl bg-[#191B26] border border-[#25D366]/30 space-y-3">
+                <div className="flex items-center space-x-2 text-[#25D366]">
+                  <MessageCircle className="w-4 h-4 fill-current" />
+                  <span className="text-xs font-extrabold uppercase">WhatsApp Support Settings</span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-[#8C91A0] uppercase block mb-1">
+                    WhatsApp Chat URL (whatsapp_url) *
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    value={whatsappUrl}
+                    onChange={(e) => setWhatsappUrl(e.target.value)}
+                    placeholder="https://wa.me/919999999999?text=Hello%20Support"
+                    className="w-full h-10 bg-[#14151E] border border-[#2B2E3E] focus:border-[#25D366] rounded-xl px-3.5 text-xs text-white outline-none font-mono"
+                  />
+                  <span className="text-[10px] text-[#6D7282] mt-1 block">
+                    Example format: <code className="text-[#34D399]">https://wa.me/919876543210</code> or direct WhatsApp link
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-[#8C91A0] uppercase block mb-1">
+                    WhatsApp Display Number (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    placeholder="+91 99999 99999"
+                    className="w-full h-10 bg-[#14151E] border border-[#2B2E3E] focus:border-[#25D366] rounded-xl px-3.5 text-xs text-white outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Telegram Config */}
+              <div className="p-4 rounded-2xl bg-[#191B26] border border-[#229ED9]/30 space-y-3">
+                <div className="flex items-center space-x-2 text-[#229ED9]">
+                  <Send className="w-4 h-4 fill-current" />
+                  <span className="text-xs font-extrabold uppercase">Telegram Support Settings</span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-[#8C91A0] uppercase block mb-1">
+                    Telegram Channel / Support URL (telegram_url) *
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    value={telegramUrl}
+                    onChange={(e) => setTelegramUrl(e.target.value)}
+                    placeholder="https://t.me/akstarmodofficial"
+                    className="w-full h-10 bg-[#14151E] border border-[#2B2E3E] focus:border-[#229ED9] rounded-xl px-3.5 text-xs text-white outline-none font-mono"
+                  />
+                  <span className="text-[10px] text-[#6D7282] mt-1 block">
+                    Example format: <code className="text-[#60A5FA]">https://t.me/yourchannel</code> or direct Telegram link
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-[#8C91A0] uppercase block mb-1">
+                    Telegram Display Handle (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={telegramUsername}
+                    onChange={(e) => setTelegramUsername(e.target.value)}
+                    placeholder="@akstarmodofficial"
+                    className="w-full h-10 bg-[#14151E] border border-[#2B2E3E] focus:border-[#229ED9] rounded-xl px-3.5 text-xs text-white outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full h-11 bg-[#25D366] hover:bg-[#20bd5a] active:scale-98 text-black font-extrabold text-xs sm:text-sm rounded-xl flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(37,211,102,0.3)] transition-all"
+                >
+                  <Save className="w-4 h-4 text-black" />
+                  <span>SAVE SUPPORT CHANNELS (FIRESTORE)</span>
                 </button>
               </div>
             </div>

@@ -63,6 +63,14 @@ export interface AppItem {
   updatedAt?: string;
 }
 
+export interface SupportSettings {
+  whatsapp_url: string;
+  telegram_url: string;
+  whatsapp_number?: string;
+  telegram_username?: string;
+  updatedAt?: string;
+}
+
 export interface PaymentSetting {
   upiId: string;
   qrCodeUrl: string;
