@@ -34,7 +34,8 @@ import { TopHeader } from '../navigation/TopHeader';
 import { AppItem, KeyTier, PaymentSetting } from '../../types';
 import { 
   uploadApkToFirebaseStorage, 
-  uploadImageToFirebaseStorage 
+  uploadImageToFirebaseStorage,
+  checkIsAdmin
 } from '../../services/firebase';
 import { uploadScreenshotToImageKit } from '../../services/imagekit';
 
@@ -365,6 +366,41 @@ export const AdminScreen: React.FC = () => {
     setPaymentSavedMsg(true);
     setTimeout(() => setPaymentSavedMsg(false), 3000);
   };
+
+  const isUserAdmin = Boolean(user && !user.isGuest && (user.isAdmin || checkIsAdmin(user.email)));
+
+  if (!isUserAdmin) {
+    return (
+      <div id="admin-screen" className="min-h-screen bg-[#0A0B0E] pb-24 text-white">
+        <TopHeader title="Admin Access" showBack={true} onBack={goBack} />
+        <main className="max-w-md mx-auto px-4 pt-16 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-[#EF4444]/15 border border-[#EF4444]/40 flex items-center justify-center text-[#EF4444] shadow-lg">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-extrabold text-white">Admin Privileges Required</h2>
+            <p className="text-xs text-[#8C91A0] leading-relaxed">
+              This console is restricted to authorized administrators only. Please sign in with an authorized Google administrator account.
+            </p>
+          </div>
+          <div className="pt-3 space-y-2.5">
+            <button
+              onClick={() => setScreen('profile')}
+              className="w-full py-3 bg-[#F5B014] hover:bg-[#FFD54F] text-black font-extrabold text-xs rounded-xl transition-all shadow-md"
+            >
+              Sign In as Admin
+            </button>
+            <button
+              onClick={() => setScreen('home')}
+              className="w-full py-3 bg-[#171922] hover:bg-[#222533] text-white font-bold text-xs rounded-xl border border-[#2B2E3E] transition-all"
+            >
+              Return to Marketplace
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div id="admin-screen" className="min-h-screen bg-[#0A0B0E] pb-24 text-white">

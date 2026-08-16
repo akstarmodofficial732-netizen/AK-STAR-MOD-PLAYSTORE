@@ -140,23 +140,33 @@ export function getGmailAvatarUrl(email?: string | null, displayName?: string | 
   if (directPhotoUrl && directPhotoUrl.trim() !== '' && !directPhotoUrl.includes('unsplash.com')) {
     return directPhotoUrl;
   }
-  const cleanEmail = (email || 'akstarmodofficial732@gmail.com').trim().toLowerCase();
-  const nameParam = encodeURIComponent(displayName || 'AK Star User');
-  return `https://unavatar.io/${cleanEmail}?fallback=https%3A%2F%2Fui-avatars.com%2Fapi%2F%3Fname%3D${nameParam}%26background%3DF5B014%26color%3D000000%26bold%3Dtrue`;
+  const cleanEmail = (email || '').trim().toLowerCase();
+  const nameParam = encodeURIComponent(displayName || (cleanEmail ? cleanEmail.split('@')[0] : 'User'));
+  if (cleanEmail) {
+    return `https://unavatar.io/${cleanEmail}?fallback=https%3A%2F%2Fui-avatars.com%2Fapi%2F%3Fname%3D${nameParam}%26background%3DF5B014%26color%3D000000%26bold%3Dtrue`;
+  }
+  return `https://ui-avatars.com/api/?name=${nameParam}&background=F5B014&color=000000&bold=true`;
 }
 
 export async function loginWithGoogle(): Promise<UserProfile> {
   if (isFirebaseConfigured && auth) {
     try {
+      // Force Google account chooser so the user can select ANY Gmail account
+      googleProvider.setCustomParameters({
+        prompt: 'select_account',
+      });
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+      const userEmail = (user.email || '').trim().toLowerCase();
+      const userName = user.displayName || (userEmail ? userEmail.split('@')[0] : 'Google User');
+
       const profile: UserProfile = {
         uid: user.uid,
-        displayName: user.displayName || 'AK Star User',
-        email: user.email || 'akstarmodofficial732@gmail.com',
-        photoURL: user.photoURL || getGmailAvatarUrl(user.email, user.displayName),
+        displayName: userName,
+        email: userEmail,
+        photoURL: user.photoURL || getGmailAvatarUrl(userEmail, userName),
         isGuest: false,
-        isAdmin: checkIsAdmin(user.email),
+        isAdmin: checkIsAdmin(userEmail),
         subscriptionStatus: 'Active Member',
         createdAt: new Date().toISOString(),
         lastLoginAt: new Date().toISOString(),
@@ -173,6 +183,7 @@ export async function loginWithGoogle(): Promise<UserProfile> {
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(profile));
       return profile;
     } catch (err: any) {
+      console.warn('Google sign-in popup error:', err);
       const isUnauthorizedDomain = 
         err?.code === 'auth/unauthorized-domain' || 
         String(err?.message || '').includes('unauthorized-domain');
@@ -182,27 +193,55 @@ export async function loginWithGoogle(): Promise<UserProfile> {
           `[Firebase Auth Note]: Current domain "${getCurrentDomain()}" is not yet added to Firebase Console Authorized Domains.`
         );
       }
-
-      return createGuestOrMockUser('AK Star User', false, 'akstarmodofficial732@gmail.com');
+      throw err;
     }
   } else {
-    return createGuestOrMockUser('AK Star User', false, 'akstarmodofficial732@gmail.com');
+    throw new Error('Firebase Auth is not configured.');
   }
 }
 
+export function loginWithCustomEmail(email: string, displayName?: string): UserProfile {
+  const cleanEmail = email.trim().toLowerCase();
+  const inferredName = displayName?.trim() || cleanEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const uid = `user-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+  const profile: UserProfile = {
+    uid,
+    displayName: inferredName,
+    email: cleanEmail,
+    photoURL: getGmailAvatarUrl(cleanEmail, inferredName),
+    isGuest: false,
+    isAdmin: checkIsAdmin(cleanEmail),
+    subscriptionStatus: 'Active Member',
+    createdAt: new Date().toISOString(),
+    lastLoginAt: new Date().toISOString(),
+  };
+
+  if (db) {
+    try {
+      setDoc(doc(db, 'users', uid), profile, { merge: true });
+    } catch (e) {
+      console.warn('Could not sync custom user profile to firestore:', e);
+    }
+  }
+
+  localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(profile));
+  return profile;
+}
+
 export function createGuestOrMockUser(
-  name: string = 'Guest User', 
-  isGuest: boolean = false,
-  email: string = isGuest ? 'guest@akstarmod.com' : 'akstarmodofficial732@gmail.com'
+  name: string = 'Guest Explorer', 
+  isGuest: boolean = true,
+  email: string = 'guest@akstarmod.com'
 ): UserProfile {
   const profile: UserProfile = {
-    uid: isGuest ? `guest-${Date.now()}` : 'user-akstar-official-732',
+    uid: isGuest ? `guest-${Date.now()}` : `user-${Date.now()}`,
     displayName: name,
     email: email,
     photoURL: getGmailAvatarUrl(email, name),
     isGuest,
     isAdmin: checkIsAdmin(email),
-    subscriptionStatus: 'Active Member',
+    subscriptionStatus: isGuest ? 'Guest Access' : 'Active Member',
     createdAt: new Date().toISOString(),
     lastLoginAt: new Date().toISOString(),
   };

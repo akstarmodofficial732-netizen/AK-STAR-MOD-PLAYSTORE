@@ -8,16 +8,15 @@ import {
   ShoppingBag, 
   User, 
   LogOut, 
-  ShieldCheck, 
-  Smartphone, 
-  Sparkles,
+  LogIn,
+  Sliders,
   HelpCircle,
-  PlusCircle,
-  Sliders
+  Sparkles,
+  CheckCircle2
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
-import { getGmailAvatarUrl } from '../../services/firebase';
+import { getGmailAvatarUrl, checkIsAdmin } from '../../services/firebase';
 
 export const SidebarDrawer: React.FC = () => {
   const { 
@@ -31,11 +30,14 @@ export const SidebarDrawer: React.FC = () => {
   const { user, logout } = useAuth();
   const [drawerImgErr, setDrawerImgErr] = useState(false);
 
-  const userEmail = user?.email || 'akstarmodofficial732@gmail.com';
-  const userDisplayName = user?.displayName || 'AK Star User';
-  const avatarUrl = drawerImgErr
+  const isAuthenticated = Boolean(user && !user.isGuest && user.email);
+  const isUserAdmin = Boolean(user && !user.isGuest && (user.isAdmin || checkIsAdmin(user.email)));
+
+  const userEmail = user?.email || '';
+  const userDisplayName = user?.displayName || (userEmail ? userEmail.split('@')[0] : 'Guest Explorer');
+  const avatarUrl = drawerImgErr || !user?.photoURL
     ? `https://ui-avatars.com/api/?name=${encodeURIComponent(userDisplayName)}&background=F5B014&color=000000&bold=true`
-    : (user?.photoURL || getGmailAvatarUrl(userEmail, userDisplayName));
+    : user.photoURL;
 
   const handleNav = (screen: any) => {
     setScreen(screen);
@@ -46,6 +48,12 @@ export const SidebarDrawer: React.FC = () => {
     setSelectedCategory(catName);
     setScreen('category-detail');
     setIsSidebarOpen(false);
+  };
+
+  const handleSignOut = async () => {
+    await logout();
+    setIsSidebarOpen(false);
+    setScreen('login');
   };
 
   return (
@@ -82,6 +90,7 @@ export const SidebarDrawer: React.FC = () => {
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setIsSidebarOpen(false)}
                   className="p-1 rounded-lg text-[#8C91A0] hover:text-white hover:bg-[#1E202B] transition-colors"
                 >
@@ -102,7 +111,9 @@ export const SidebarDrawer: React.FC = () => {
                   <p className="text-xs font-bold text-white truncate">{userDisplayName}</p>
                   <p className="text-[10px] text-[#F5B014] flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#F5B014] animate-ping" />
-                    {user?.isGuest ? 'Guest Explorer' : 'Active Member'}
+                    {isAuthenticated 
+                      ? (isUserAdmin ? 'Admin Master' : 'Google Verified') 
+                      : 'Guest / Not Signed In'}
                   </p>
                 </div>
               </div>
@@ -111,6 +122,7 @@ export const SidebarDrawer: React.FC = () => {
               <div className="space-y-1 my-3">
                 <p className="text-[10px] font-bold text-[#6D7282] uppercase tracking-wider px-2 mb-2">Navigation</p>
                 <button
+                  type="button"
                   onClick={() => handleNav('home')}
                   className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#D0D4E0] hover:text-[#F5B014] hover:bg-[#181A24] transition-all"
                 >
@@ -118,6 +130,7 @@ export const SidebarDrawer: React.FC = () => {
                   <span>Home Marketplace</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleNav('categories')}
                   className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#D0D4E0] hover:text-[#F5B014] hover:bg-[#181A24] transition-all"
                 >
@@ -125,6 +138,7 @@ export const SidebarDrawer: React.FC = () => {
                   <span>All Categories</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleNav('search')}
                   className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#D0D4E0] hover:text-[#F5B014] hover:bg-[#181A24] transition-all"
                 >
@@ -132,20 +146,28 @@ export const SidebarDrawer: React.FC = () => {
                   <span>Search Applications</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleNav('purchases')}
                   className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#D0D4E0] hover:text-[#F5B014] hover:bg-[#181A24] transition-all"
                 >
                   <ShoppingBag className="w-4 h-4 text-[#F5B014]" />
                   <span>My Orders & Keys</span>
                 </button>
+
+                {/* Role-Based Admin Link: ONLY visible for genuine Admins */}
+                {isUserAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => handleNav('admin')}
+                    className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#F5B014] bg-[#F5B014]/10 border border-[#F5B014]/30 hover:bg-[#F5B014]/20 transition-all"
+                  >
+                    <Sliders className="w-4 h-4 text-[#F5B014]" />
+                    <span>Admin Console (Upload APK)</span>
+                  </button>
+                )}
+
                 <button
-                  onClick={() => handleNav('admin')}
-                  className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#F5B014] bg-[#F5B014]/10 border border-[#F5B014]/30 hover:bg-[#F5B014]/20 transition-all"
-                >
-                  <Sliders className="w-4 h-4 text-[#F5B014]" />
-                  <span>Admin Console (Upload APK)</span>
-                </button>
-                <button
+                  type="button"
                   onClick={() => handleNav('profile')}
                   className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold text-[#D0D4E0] hover:text-[#F5B014] hover:bg-[#181A24] transition-all"
                 >
@@ -162,6 +184,7 @@ export const SidebarDrawer: React.FC = () => {
                     {dynamicCategories.slice(0, 6).map((cat) => (
                       <button
                         key={cat.id}
+                        type="button"
                         onClick={() => handleCategoryClick(cat.name)}
                         className="text-left text-[11px] px-2.5 py-1.5 rounded-md bg-[#161720] hover:bg-[#1F212E] text-[#B5BAC8] hover:text-[#F5B014] truncate transition-colors"
                       >
@@ -187,6 +210,7 @@ export const SidebarDrawer: React.FC = () => {
             {/* Bottom Actions */}
             <div className="pt-4 border-t border-[#1E202B] space-y-2">
               <button
+                type="button"
                 onClick={() => {
                   setIsSupportModalOpen(true);
                   setIsSidebarOpen(false);
@@ -199,13 +223,25 @@ export const SidebarDrawer: React.FC = () => {
                 </div>
               </button>
 
-              <button
-                onClick={logout}
-                className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-semibold text-[#EF4444] hover:bg-[#EF4444]/10 transition-all"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out</span>
-              </button>
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-semibold text-[#EF4444] hover:bg-[#EF4444]/10 transition-all"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleNav('login')}
+                  className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-semibold text-[#F5B014] hover:bg-[#F5B014]/10 transition-all"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign In</span>
+                </button>
+              )}
             </div>
           </motion.div>
         </div>
