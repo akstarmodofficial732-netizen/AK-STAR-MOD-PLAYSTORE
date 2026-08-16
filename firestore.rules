@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // User Profile
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && request.resource.data.uid == userId;
+      allow delete: if false;
+    }
+
+    // Software Apps Catalog (Publicly readable)
+    match /apps/{appId} {
+      allow read: if true;
+      allow write: if false; // Managed by Admin Android APK
+    }
+
+    // Payment Settings (UPI ID & QR Code dynamically read)
+    match /payment_settings/{configId} {
+      allow read: if true;
+      allow write: if false; // Managed by Admin Android APK
+    }
+
+    // Coupons
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if false; // Managed by Admin Android APK
+    }
+
+    // Purchases
+    match /purchases/{purchaseId} {
+      // User can only list and read their own purchases
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      // User can submit a new purchase record with 'pending' status only
+      allow create: if isSignedIn() 
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.paymentScreenshotUrl is string
+        && request.resource.data.paymentScreenshotUrl.size() > 0;
+        
+      // Only Admin APK can approve/reject and assign license keys
+      allow update, delete: if false;
+    }
+  }
+}

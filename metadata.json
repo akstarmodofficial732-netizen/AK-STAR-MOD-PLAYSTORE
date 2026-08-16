@@ -1,0 +1,7 @@
+{
+  "name": "AK STAR MOD",
+  "description": "Premium software and apps marketplace website featuring key activation, UPI verification, and realtime updates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

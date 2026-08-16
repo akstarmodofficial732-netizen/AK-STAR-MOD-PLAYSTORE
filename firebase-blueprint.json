@@ -1,0 +1,121 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile document",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "format": "email", "maxLength": 150 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "AppItem": {
+      "title": "AppItem",
+      "description": "Software or application listing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 100 },
+        "developer": { "type": "string", "maxLength": 100 },
+        "tagline": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "category": { "type": "string", "maxLength": 50 },
+        "version": { "type": "string", "maxLength": 20 },
+        "size": { "type": "string", "maxLength": 30 },
+        "iconUrl": { "type": "string", "maxLength": 500 },
+        "bannerUrl": { "type": "string", "maxLength": 500 },
+        "screenshots": { "type": "array" },
+        "features": { "type": "array" },
+        "whatsNew": { "type": "array" },
+        "rating": { "type": "number" },
+        "isEditorChoice": { "type": "boolean" },
+        "badgeText": { "type": "string", "maxLength": 50 },
+        "goFileUrl": { "type": "string", "maxLength": 500 },
+        "keyTiers": { "type": "array" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "category", "version"]
+    },
+    "Purchase": {
+      "title": "Purchase",
+      "description": "Purchase transaction for software keys",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string", "maxLength": 64 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "format": "email", "maxLength": 150 },
+        "userName": { "type": "string", "maxLength": 100 },
+        "appId": { "type": "string", "maxLength": 64 },
+        "appName": { "type": "string", "maxLength": 100 },
+        "appIcon": { "type": "string", "maxLength": 500 },
+        "keyTierId": { "type": "string", "maxLength": 64 },
+        "keyTierName": { "type": "string", "maxLength": 100 },
+        "originalPrice": { "type": "number" },
+        "discount": { "type": "number" },
+        "finalAmount": { "type": "number" },
+        "couponCode": { "type": "string", "maxLength": 32 },
+        "paymentScreenshotUrl": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "rejectionReason": { "type": "string", "maxLength": 500 },
+        "licenseKey": { "type": "string", "maxLength": 128 },
+        "goFileDownloadUrl": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["orderId", "userId", "appId", "finalAmount", "status"]
+    },
+    "PaymentSetting": {
+      "title": "PaymentSetting",
+      "description": "Dynamic Admin Payment Configuration for UPI and QR Code",
+      "type": "object",
+      "properties": {
+        "upiId": { "type": "string", "maxLength": 100 },
+        "qrCodeUrl": { "type": "string", "maxLength": 500 },
+        "beneficiaryName": { "type": "string", "maxLength": 100 },
+        "instructions": { "type": "string", "maxLength": 500 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["upiId", "qrCodeUrl"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Discount coupon code",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "maxLength": 32 },
+        "discountType": { "type": "string", "enum": ["fixed", "percentage"] },
+        "discountValue": { "type": "number" },
+        "active": { "type": "boolean" },
+        "expiryDate": { "type": "string" }
+      },
+      "required": ["code", "discountType", "discountValue", "active"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile records"
+    },
+    "/apps/{appId}": {
+      "schema": "AppItem",
+      "description": "Catalog of software applications"
+    },
+    "/purchases/{purchaseId}": {
+      "schema": "Purchase",
+      "description": "User purchases and key delivery records"
+    },
+    "/payment_settings/{configId}": {
+      "schema": "PaymentSetting",
+      "description": "Admin configured UPI and QR details"
+    },
+    "/coupons/{couponId}": {
+      "schema": "Coupon",
+      "description": "Discount coupons"
+    }
+  }
+}
